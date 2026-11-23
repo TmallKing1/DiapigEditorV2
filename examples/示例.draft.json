@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "title": "向导",
+      "subtitle": "奇域管理员",
+      "content": ["欢迎来到这里，<PLAYER_NAME>。", "要先听一下<color=#FFCC33>规则</color>吗？"],
+      "mode": "typewriter",
+      "choices": [
+        { "text": "听一下规则", "goto": "规则" },
+        { "text": "直接开始", "goto": "开始" }
+      ],
+      "default": 1,
+      "duration": 5
+    },
+    {
+      "id": "规则",
+      "content": "规则很简单：收集三枚徽记，然后回到这里。"
+    },
+    {
+      "content": "路上遇到岔路时，记得看<b>路牌</b>。",
+      "goto": "开始"
+    },
+    {
+      "id": "开始",
+      "title": "向导",
+      "content": "那就出发吧，祝你好运！",
+      "leave": "开始游戏",
+      "end": true
+    }
+  ]
+}

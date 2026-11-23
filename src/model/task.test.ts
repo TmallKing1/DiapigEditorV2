@@ -1,0 +1,121 @@
+import example from "./fixtures/example_task_chain.json?raw";
+import { describe, expect, it } from "vitest";
+import { stringifyDialog } from "./codec";
+import {
+  MARKER_POINT,
+  type TaskEditState,
+  type TaskItem,
+  addTaskAfter,
+  duplicateIds,
+  duplicateTask,
+  moveTask,
+  newTask,
+  newTaskDoc,
+  nextTaskId,
+  pasteTaskOver,
+  removeTask,
+  taskIdsReady,
+} from "./task";
+import { detectKind, parseTaskChain, readTaskChain, stringifyTaskChain, writeTaskChain } from "./taskCodec";
+import { newDoc } from "./types";
+
+
+const strip = (tasks: TaskItem[]) => tasks.map(({ uid: _uid, ...rest }) => rest);
+
+describe("任务链读写", () => {
+  it("读出游戏导出的示例", () => {
+    const doc = parseTaskChain(example);
+    expect(doc.ids).toEqual({ chain: "1077936137", task: "1077936136" });
+    expect(doc.name).toBe("抓老鼠");
+    expect(strip(doc.tasks)).toEqual([
+      {
+        id: 0,
+        name: "抓住出生点的老鼠",
+        hint: "移动到出生点，即可抓老鼠",
+        point: 1073741825,
+        marker: MARKER_POINT,
+        markerRange: 0,
+        detect: 0,
+        auto: 3,
+        optional: "吃一个面包，补充能量",
+        enterEvent: "",
+      },
+    ]);
+    // 示例是 2026-11-19 之前导出的，没有两个事件字段：读成空串
+    expect(doc.completeEvent).toBe("");
+  });
+
+  it("事件字段写出再读回，位置在结构体末尾", () => {
+    const doc = parseTaskChain(example);
+    doc.completeEvent = "链完成:抓老鼠";
+    doc.tasks[0].enterEvent = "进入:抓老鼠";
+    const json = writeTaskChain(doc) as any;
+    expect(json.value.map((f: any) => f.param_type)).toEqual(["String", "StructList", "String"]);
+    expect(json.value[2].value).toBe("链完成:抓老鼠");
+    expect(json.value[1].value.value[0].value.value[9]).toEqual({ param_type: "String", value: "进入:抓老鼠" });
+    const again = parseTaskChain(JSON.stringify(json));
+    expect(again.completeEvent).toBe("链完成:抓老鼠");
+    expect(again.tasks[0].enterEvent).toBe("进入:抓老鼠");
+  });
+
+  it("写出再读回不变，字段类型与示例一致", () => {
+    const doc = parseTaskChain(example);
+    const again = parseTaskChain(stringifyTaskChain(doc));
+    expect(again.ids).toEqual(doc.ids);
+    expect(again.name).toBe(doc.name);
+    expect(strip(again.tasks)).toEqual(strip(doc.tasks));
+    const types = (j: any) => j.value[1].value.value[0].value.value.map((f: any) => f.param_type);
+    expect(types(writeTaskChain(doc))).toEqual([...types(JSON.parse(example)), "String"]);
+    expect(writeTaskChain(doc).value[1].value.value[0].value.structId).toBe("1077936136");
+  });
+
+  it("不是任务链时报错", () => {
+    expect(() => parseTaskChain("{")).toThrow("不是有效的 JSON");
+    expect(() => parseTaskChain(stringifyDialog(newDoc({ dialog: "1", node: "2", branch: "3" })))).toThrow("不是任务链");
+    expect(() => readTaskChain({ type: "Struct", value: [] })).toThrow();
+  });
+});
+
+describe("文件种类识别", () => {
+  it("对话 / 任务 / 其他", () => {
+    expect(detectKind(example)).toBe("task");
+    expect(detectKind(stringifyDialog(newDoc()))).toBe("dialog");
+    expect(detectKind("not json")).toBeNull();
+    expect(detectKind('{"type":"Struct","value":[{"param_type":"Int32","value":"1"}]}')).toBeNull();
+    expect(detectKind("﻿" + example)).toBe("task");
+  });
+});
+
+describe("任务列表", () => {
+  const state = (ids: number[]): TaskEditState => ({
+    doc: { ...newTaskDoc(), tasks: ids.map((id) => newTask(id)) },
+    clipboard: null,
+  });
+
+  it("编号：最大 + 1，空列表为 0；重复编号", () => {
+    expect(nextTaskId([])).toBe(0);
+    expect(nextTaskId(state([3, 1, 7]).doc.tasks)).toBe(8);
+    expect([...duplicateIds(state([1, 2, 1, 3, 3]).doc.tasks)].sort()).toEqual([1, 3]);
+  });
+
+  it("添加、复制取新编号；删除保留最后一个；移动；粘贴保留 uid", () => {
+    let s = addTaskAfter(state([0, 5]), 0);
+    expect(s.doc.tasks.map((t) => t.id)).toEqual([0, 6, 5]);
+    s = duplicateTask(s, 2);
+    expect(s.doc.tasks.map((t) => t.id)).toEqual([0, 6, 5, 7]);
+    expect(moveTask(s, 3, 0).doc.tasks.map((t) => t.id)).toEqual([7, 0, 6, 5]);
+    expect(moveTask(s, 0, 9)).toBe(s);
+    const one = state([4]);
+    expect(removeTask(one, 0)).toBe(one);
+    expect(removeTask(s, 1).doc.tasks.map((t) => t.id)).toEqual([0, 5, 7]);
+    const clip = { ...s, clipboard: { ...s.doc.tasks[0], name: "复制的" } };
+    const pasted = pasteTaskOver(clip, 2);
+    expect(pasted.doc.tasks[2].name).toBe("复制的");
+    expect(pasted.doc.tasks[2].uid).toBe(s.doc.tasks[2].uid);
+  });
+
+  it("结构体 ID 都填了才能保存", () => {
+    expect(taskIdsReady({ chain: "0", task: "1" })).toBe(false);
+    expect(taskIdsReady({ chain: "1077936137", task: "1077936136" })).toBe(true);
+  });
+});

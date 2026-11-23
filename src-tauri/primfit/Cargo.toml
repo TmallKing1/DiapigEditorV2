@@ -1,0 +1,12 @@
+[package]
+name = "primfit"
+version = "0.1.0"
+description = "图元拟合：用染色的矩形、椭圆、三角形逼近一张图片"
+edition = "2021"
+
+[dependencies]
+rayon = "1"
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }

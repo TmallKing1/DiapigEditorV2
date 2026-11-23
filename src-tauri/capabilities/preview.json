@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "preview",
+  "description": "对话预览窗口：自绘关闭按钮、拖动窗口、接收主窗口发来的对话数据",
+  "windows": ["preview"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-destroy",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
+}

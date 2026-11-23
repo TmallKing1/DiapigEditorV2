@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "主窗口：原生打开 / 保存对话框，读写用户所选的文本文件，导出 PNG，关闭确认",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-destroy",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-toggle-maximize",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-set-size",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-center",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-write-file",
+    "clipboard-manager:allow-read-text"
+  ]
+}

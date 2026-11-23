@@ -1,0 +1,63 @@
+{ 
+   "structId" : "1077936137", 
+   "type" : "Struct", 
+   "value" : [ 
+      { 
+         "param_type" : "String", 
+         "value" : "抓老鼠"
+      }, 
+      { 
+         "param_type" : "StructList", 
+         "value" : { 
+            "structId" : "1077936136", 
+            "value" : [ 
+               { 
+                  "param_type" : "Struct", 
+                  "value" : { 
+                     "structId" : "1077936136", 
+                     "type" : "Struct", 
+                     "value" : [ 
+                        { 
+                           "param_type" : "Int32", 
+                           "value" : "0"
+                        }, 
+                        { 
+                           "param_type" : "String", 
+                           "value" : "抓住出生点的老鼠"
+                        }, 
+                        { 
+                           "param_type" : "String", 
+                           "value" : "移动到出生点，即可抓老鼠"
+                        }, 
+                        { 
+                           "param_type" : "Int32", 
+                           "value" : "1073741825"
+                        }, 
+                        { 
+                           "param_type" : "Int32", 
+                           "value" : "1"
+                        }, 
+                        { 
+                           "param_type" : "Int32", 
+                           "value" : "0"
+                        }, 
+                        { 
+                           "param_type" : "Float", 
+                           "value" : "0.00"
+                        }, 
+                        { 
+                           "param_type" : "Float", 
+                           "value" : "3.00"
+                        }, 
+                        { 
+                           "param_type" : "String", 
+                           "value" : "吃一个面包，补充能量"
+                        }
+                     ]
+                  }
+               }
+            ]
+         }
+      }
+   ]
+}

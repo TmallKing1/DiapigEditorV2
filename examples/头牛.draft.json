@@ -1,0 +1,60 @@
+{
+  "nodes": [
+    {
+      "title": "头牛",
+      "content": "你好，<PLAYER_NAME>，我是头牛，我来协助你抵挡僵尸。"
+    },
+    {
+      "content": ["你没有产阳光的植物。", "我先借你几个向日葵，行吧？"],
+      "choices": [
+        { "text": "<color=#ACFF44>是</color>", "goto": "借出" },
+        { "text": "<color=#FF5E41>否</color>", "goto": "客气" }
+      ],
+      "default": 0,
+      "duration": 8
+    },
+    {
+      "id": "客气",
+      "content": ["不用跟我客气。", "由不得你。"]
+    },
+    {
+      "id": "借出",
+      "content": "好了，借你了，下关你得还我。"
+    },
+    {
+      "content": "再免费给你升级个植物。"
+    },
+    {
+      "content": "欸，升错了，我帮你铲掉。"
+    },
+    {
+      "content": "对了，我忘告诉你了，你还要还我利息20个向日葵。"
+    },
+    {
+      "content": ["那你是高手呀，用不到小推车。", "我再帮你种个僵尸，行吧？"],
+      "choices": [
+        { "text": "<color=#ACFF44>是</color>", "goto": "答对" },
+        { "text": "<color=#FF5E41>否</color>", "goto": "答错" }
+      ],
+      "default": 1,
+      "duration": 8
+    },
+    {
+      "id": "答对",
+      "content": "答对了，再奖励你几个血多僵尸。",
+      "goto": "收尾"
+    },
+    {
+      "id": "答错",
+      "content": "答错了，作为惩罚给你几个大嘴花。"
+    },
+    {
+      "id": "收尾",
+      "content": "做好了，这回指定成功。"
+    },
+    {
+      "content": "僵尸要来了，我先去上个厕所。",
+      "end": true
+    }
+  ]
+}

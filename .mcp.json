@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "diapig-dialog": {
+      "command": "node",
+      "args": ["scripts/mcp.mjs", "--root", "."]
+    }
+  }
+}
