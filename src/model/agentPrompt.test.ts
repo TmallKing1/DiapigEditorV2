@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import DOC from "../../docs/图元拟合图片约定.md?raw";
 import PRIM_ART_VIEW from "./PrimArtView.lua?raw";
 import { agentPrompt } from "./agentPrompt";
 import type { Art } from "./primfit";
@@ -22,12 +21,11 @@ const transparent: Art = {
 };
 
 describe("Agent 提示词", () => {
-  it("参考绘制代码与约定文档第 4 节逐字相同", () => {
-    const doc = DOC.replace(/\r\n/g, "\n");
-    const section = doc.slice(doc.indexOf("## 4."));
-    const code = /```lua\n([\s\S]*?)```/.exec(section)?.[1];
-    expect(code).toBeDefined();
-    expect(PRIM_ART_VIEW.replace(/\r\n/g, "\n")).toBe(code);
+  it("提示词附带完整的参考绘制代码", () => {
+    const text = agentPrompt({ module: "CoverArt", art: hard }).replace(/\r\n/g, "\n");
+    const section = text.slice(text.indexOf("## 6. 参考实现"));
+    const code = /```lua\n([\s\S]*?)\n```/.exec(section)?.[1];
+    expect(code).toBe(PRIM_ART_VIEW.replace(/\r\n/g, "\n").trimEnd());
   });
 
   it("包含各章节，并代入本次导出的参数", () => {

@@ -1,4 +1,4 @@
-// 进出场过渡，参数取自仓库根目录 ui-motion-design-guide.md 第 12 节「默认参数速查」。
+// 页面进出场过渡。
 // 各过渡按线性进度 p 自行计算位移与透明度，便于让同一元素上的两条轨道用不同时长。
 import type { TransitionConfig } from "svelte/transition";
 

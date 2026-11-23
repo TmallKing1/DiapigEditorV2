@@ -1,7 +1,7 @@
 // 「复制 Agent 提示词」：给其他设备上的 Agent 用的完整说明，告诉它如何在千星奇域 Lua 项目里使用本工具导出的图元拟合模块。
 // 对方的工作区不一定有本机的 Skill、API 文档、工作约定或素材表，模板 ID 也可能不同，所以这里只写引擎与 API 层面的事实，
 // 不引用本机路径；项目相关的 ID 让对方先在工作区找、找不到再问用户。
-// 参考绘制代码只维护一份：PrimArtView.lua 与仓库 docs/图元拟合图片约定.md 第 4 节逐字相同（agentPrompt.test.ts 检查）。
+// 参考绘制代码嵌在提示词中，供用户交给协作者。
 import PRIM_ART_VIEW from "./PrimArtView.lua?raw";
 import { ASSET_OF_KIND, IMAGE_TYPE_OF_KIND, KIND_LABELS, type Art, artFormat, colorHex } from "./primfit";
 

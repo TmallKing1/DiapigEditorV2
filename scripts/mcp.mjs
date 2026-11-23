@@ -111,9 +111,8 @@ const TOOLS = [
     description: "返回对话草稿的格式说明（字段、流程、内容写法、校验规则）和增量修改的操作说明。第一次使用前先调用。",
     inputSchema: { type: "object", properties: {} },
     async run() {
-      const guide = readFileSync(resolve(toolRoot, "docs/对话草稿格式.md"), "utf8");
-      const start = guide.indexOf("## 示例");
-      return [start >= 0 ? guide.slice(start) : guide, EDIT_GUIDE].join("\n\n");
+      const guide = readFileSync(resolve(toolRoot, "scripts/dialog-draft-guide.txt"), "utf8");
+      return [guide, EDIT_GUIDE].join("\n\n");
     },
   },
   {
