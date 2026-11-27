@@ -1,11 +1,12 @@
-// 主窗口交给预览窗口的数据：对话、对话类型与预览设置。经 localStorage（窗口打开前写好，预览页启动时读）
-// 和 Tauri 事件 / storage 事件（窗口已开着时刷新）传递，seq 递增用来去重。
+// 主窗口交给预览窗口的数据：桌面端用 Tauri 事件，浏览器开发预览用 localStorage。
 import type { DialogDoc } from "./types";
 import type { DialogType, SimNode } from "./previewSim";
 import type { SimDevice } from "./previewConfig";
+import type { CustomFont } from "../lib/settings.svelte";
 
 export const PAYLOAD_KEY = "diapig-editor.preview.payload";
 export const PAYLOAD_EVENT = "preview:load";
+export const PREVIEW_READY_EVENT = "preview:ready";
 export const PREVIEW_LABEL = "preview";
 
 export type PreviewKindId = "locked" | "nonlocked" | "black";
@@ -27,6 +28,9 @@ export interface PreviewPayload {
   font: string;
   /** 主窗口当前生效的界面字体回退列表（系统默认时为空），预览字体跟随界面或缺字时用；旧数据没有 */
   uiFonts?: string[];
+  /** 预览及界面字体栈引用的自定义字体 */
+  customFonts?: CustomFont[];
+  themeColor?: string;
 }
 
 /** 编辑器对话 → 预览节点：去掉界面用的 uid 与预览不执行的进入 / 离开事件，数值字段兜底 */

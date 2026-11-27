@@ -242,9 +242,9 @@ export function themeColorOf(id: string): string {
  * 只写基色 --theme；浅底、悬停底、阴影等由 app.css 的 :root 用 color-mix 从它推导。
  * --theme 保持为普通的 #rrggbb，画布绘制时会直接读它（PrimFitPage、WeightMaskDialog）。
  */
-export function applyTheme() {
+export function applyTheme(id = settings.themeColor) {
   if (typeof document === "undefined") return;
-  document.documentElement.style.setProperty("--theme", themeColorOf(settings.themeColor).toLowerCase());
+  document.documentElement.style.setProperty("--theme", themeColorOf(id).toLowerCase());
 }
 
 export function setThemeColor(id: string) {
@@ -273,7 +273,7 @@ export function setContentFont(name: string) {
 export const customFontState = $state<Record<string, { status: "loading" | "ok" | "error"; message?: string }>>({});
 
 /** 已注册到 document.fonts 的字体，删除时据此移除 */
-const faces = new Map<string, FontFace>();
+const faces = new Map<string, { face: FontFace; path: string }>();
 
 /** 引用字体家族名的设置项：删除自定义字体时改回默认值 */
 const FONT_KEYS = ["contentFont", "previewFont", "richPreviewFont"] as const;
@@ -290,33 +290,39 @@ async function readFont(path: string): Promise<ArrayBuffer> {
 }
 
 /** 用字节构造 FontFace 并注册到当前页面（不需要 CSP 的 font-src）；解析失败时抛出 */
-async function addFace(family: string, data: ArrayBuffer): Promise<void> {
-  const face = new FontFace(family, data);
+async function addFace(font: CustomFont, data: ArrayBuffer): Promise<void> {
+  const face = new FontFace(font.family, data);
   try {
     await face.load();
   } catch {
     throw new Error("无法解析字体文件");
   }
-  const old = faces.get(family);
-  if (old) document.fonts.delete(old);
+  const old = faces.get(font.family);
+  if (old) document.fonts.delete(old.face);
   document.fonts.add(face);
-  faces.set(family, face);
+  faces.set(font.family, { face, path: font.path });
 }
 
 async function loadOne(font: CustomFont) {
   customFontState[font.family] = { status: "loading" };
   try {
-    await addFace(font.family, await readFont(font.path));
+    await addFace(font, await readFont(font.path));
     customFontState[font.family] = { status: "ok" };
   } catch (e) {
+    // 同名字体换了文件而新文件已失效时，按当前配置回退到备用字体。
+    const old = faces.get(font.family);
+    if (old && old.path !== font.path) {
+      document.fonts.delete(old.face);
+      faces.delete(font.family);
+    }
     customFontState[font.family] = { status: "error", message: e instanceof Error ? e.message : String(e) };
   }
 }
 
-/** 把注册的自定义字体（settings.customFonts）加载进当前页面。主窗口和预览窗口启动时各调用一次；读不到的跳过 */
-export async function loadCustomFonts(): Promise<void> {
+/** 把自定义字体加载进当前页面；预览窗口只传入当前字体栈里用到的字体 */
+export async function loadCustomFonts(fonts: readonly CustomFont[] = settings.customFonts): Promise<void> {
   if (!isTauri || typeof document === "undefined") return;
-  await Promise.all(settings.customFonts.filter((f) => !faces.has(f.family)).map(loadOne));
+  await Promise.all(fonts.filter((f) => faces.get(f.family)?.path !== f.path).map(loadOne));
 }
 
 /**
@@ -336,7 +342,7 @@ export async function registerCustomFont(): Promise<{ font: CustomFont | null; e
   const taken = [...settings.customFonts.map((f) => f.family), ...system.flatMap((f) => [f.name, f.local ?? ""])];
   const font: CustomFont = { family: uniqueFamily(name, taken), path };
   // 先确认字体能加载，再写进设置：解析失败的文件不留下条目
-  await addFace(font.family, data);
+  await addFace(font, data);
   customFontState[font.family] = { status: "ok" };
   settings.customFonts = [...settings.customFonts, font];
   save();
@@ -346,7 +352,7 @@ export async function registerCustomFont(): Promise<{ font: CustomFont | null; e
 /** 从页面移除一个字体，并把引用它的设置改回默认值（不保存，由调用方保存） */
 function dropFontRefs(family: string) {
   const face = faces.get(family);
-  if (face) document.fonts.delete(face);
+  if (face) document.fonts.delete(face.face);
   faces.delete(family);
   delete customFontState[family];
   for (const key of FONT_KEYS) if (settings[key] === family) settings[key] = DEFAULTS[key];
@@ -363,9 +369,9 @@ export function removeCustomFont(family: string) {
 }
 
 /** 把界面字体写到根元素的 CSS 变量上；默认字体栈在 app.css 的 --font-default */
-export function applyUiFont() {
+export function applyUiFont(fonts = activeUiFonts()) {
   const root = document.documentElement;
-  const stack = uiFontStack();
+  const stack = fontStack(fonts);
   if (stack) root.style.setProperty("--font-ui", stack);
   else root.style.removeProperty("--font-ui");
 }
@@ -373,11 +379,6 @@ export function applyUiFont() {
 /** 当前生效的界面字体列表：系统默认模式为空 */
 export function activeUiFonts(): string[] {
   return settings.uiFontMode === "custom" ? [...settings.uiFonts] : [];
-}
-
-/** 界面字体的 CSS 回退链；空串 = 系统默认字体栈 */
-export function uiFontStack(): string {
-  return fontStack(activeUiFonts());
 }
 
 export function setTitleBar(mode: TitleBarMode) {

@@ -5,13 +5,14 @@
   // Lua 没用到的 Esc 关闭预览，R 重新开始。接上手柄时（Gamepad API，标准布局）：A 确认、B 返回、X 自动、
   // Y 对话回顾、RB 隐藏 UI、十字键上下移动、LB + 十字键选非锁定选项、左摇杆移动锁定选项 / 摇杆滚动回顾。
   // 预览的设备（设置「设备预设」）决定工具栏样式、按键提示与选项卡尺寸，不限制用哪种输入。
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { isTauri } from "../lib/files";
+  import { applyTheme, applyUiFont, loadCustomFonts } from "../lib/settings.svelte";
   import Icon from "../ui/Icon.svelte";
   import { PREVIEW_PLAYER_NAME, REVIEW } from "../model/previewConfig";
   import { fitBox, luaStage } from "../model/previewLayout";
   import { fontStack } from "../model/prefs";
-  import { isPayload, KIND_LABEL, KIND_TYPE, PAYLOAD_EVENT, PAYLOAD_KEY, simDevice, type PreviewPayload } from "../model/previewPayload";
+  import { isPayload, KIND_LABEL, KIND_TYPE, PAYLOAD_EVENT, PAYLOAD_KEY, PREVIEW_READY_EVENT, simDevice, type PreviewPayload } from "../model/previewPayload";
   import { DialogSim, type Action, type Snapshot } from "../model/previewSim";
   import TooltipHost from "../ui/TooltipHost.svelte";
   import Stage from "./Stage.svelte";
@@ -38,10 +39,30 @@
   const uiStack = $derived(fontStack(payload?.uiFonts ?? []) || "var(--font-default)");
   const fontFamily = $derived(payload?.font ? `"${payload.font.replaceAll('"', '\\"')}", ${uiStack}` : uiStack);
 
+  let requestedSeq = -1;
+  let loading = Promise.resolve();
   function load(p: PreviewPayload) {
-    if (payload && p.seq <= payload.seq) return;
-    payload = p;
-    restart();
+    if (p.seq <= requestedSeq) return;
+    requestedSeq = p.seq;
+    // 字体注册是窗口级的。串行处理可防止较早的加载覆盖当前选用的字体。
+    loading = loading.then(async () => {
+      if (p.seq !== requestedSeq) return;
+      await loadCustomFonts(p.customFonts);
+      if (p.seq !== requestedSeq) return;
+      applyTheme(p.themeColor);
+      applyUiFont(p.uiFonts);
+      payload = p;
+      restart();
+      if (isTauri) {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await tick();
+        if (p.seq !== requestedSeq) return;
+        const win = getCurrentWindow();
+        await win.show();
+        await win.unminimize().catch(() => {});
+        await win.setFocus().catch(() => {});
+      }
+    }).catch(console.error);
   }
   function restart() {
     if (!payload) return;
@@ -67,22 +88,27 @@
   }
 
   onMount(() => {
-    readStored();
     const onStorage = (e: StorageEvent) => {
       if (e.key === PAYLOAD_KEY) readStored();
     };
-    window.addEventListener("storage", onStorage);
     let unlisten: (() => void) | null = null;
     let disposed = false;
     if (isTauri) {
-      void import("@tauri-apps/api/event").then(({ listen }) =>
-        listen<unknown>(PAYLOAD_EVENT, (e) => {
+      void import("@tauri-apps/api/event").then(async ({ listen, emit }) => {
+        const stop = await listen<unknown>(PAYLOAD_EVENT, (e) => {
           if (isPayload(e.payload)) load(e.payload);
-        }).then((u) => {
-          if (disposed) u();
-          else unlisten = u;
-        }),
-      );
+        });
+        if (disposed) {
+          stop();
+          return;
+        }
+        unlisten = stop;
+        // 监听装好后再向主窗口请求首份数据，避免窗口还在加载时错过事件。
+        await emit(PREVIEW_READY_EVENT);
+      }).catch(console.error);
+    } else {
+      window.addEventListener("storage", onStorage);
+      readStored();
     }
     // 逐帧推进：与游戏一样按真实经过时间（单帧最多 0.25 s，见 DialogSim.update）
     let raf = 0;
@@ -100,6 +126,7 @@
     raf = requestAnimationFrame(loop);
     return () => {
       disposed = true;
+      requestedSeq = -1;
       cancelAnimationFrame(raf);
       window.removeEventListener("storage", onStorage);
       unlisten?.();

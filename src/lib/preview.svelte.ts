@@ -1,7 +1,7 @@
 // 对话预览：在独立窗口里模拟游戏内的对话表现。这里是主窗口一侧：选类型、打包数据、打开或刷新预览窗口。
 // 预览窗口自己的页面在 preview.html / src/preview/。
 import { canvasSize, windowSize, type Size, type WindowMode } from "../model/previewLayout";
-import { KIND_LABEL, PAYLOAD_EVENT, PAYLOAD_KEY, PREVIEW_LABEL, toSimNodes, type PreviewKindId, type PreviewPayload } from "../model/previewPayload";
+import { KIND_LABEL, PAYLOAD_EVENT, PAYLOAD_KEY, PREVIEW_LABEL, PREVIEW_READY_EVENT, toSimNodes, type PreviewKindId, type PreviewPayload } from "../model/previewPayload";
 import { dlg, outputDoc } from "./dialog.svelte";
 import { isTauri } from "./files";
 import { activeUiFonts, settings, type PreviewKind } from "./settings.svelte";
@@ -13,6 +13,9 @@ export type DialogKind = Exclude<PreviewKind, "ask">;
 export const PREVIEW_KIND_LABEL = KIND_LABEL;
 
 let seq = 0;
+let desktopQueue = Promise.resolve();
+let desktopPayload: PreviewPayload | null = null;
+let listeningForPreview = false;
 /** 上次给窗口定尺寸用的设置；复用窗口时只有这些变了才重新设大小，保留用户手动拉的尺寸 */
 let lastGeometry = "";
 /** 浏览器开发预览：window.open 打开的预览页 */
@@ -41,6 +44,8 @@ function buildPayload(kind: PreviewKindId): PreviewPayload | null {
   const doc = dlg.doc;
   if (!doc) return null;
   const out = outputDoc(doc);
+  const uiFonts = activeUiFonts();
+  const font = settings.previewFont;
   seq = Math.max(seq + 1, Date.now());
   return {
     seq,
@@ -50,63 +55,79 @@ function buildPayload(kind: PreviewKindId): PreviewPayload | null {
     canvas: canvasSize(settings.previewCanvas, settings.previewCanvasW, settings.previewCanvasH),
     keyHint: settings.previewKeyHint,
     device: settings.previewDevice === "custom" ? undefined : settings.previewDevice,
-    font: settings.previewFont,
-    uiFonts: activeUiFonts(),
+    font,
+    uiFonts,
+    customFonts: settings.customFonts.filter(({ family }) => family === font || uiFonts.includes(family)).map((entry) => ({ ...entry })),
+    themeColor: settings.themeColor,
   };
 }
 
-/** 写入 localStorage：新窗口启动时读它，已开着的窗口通过 storage 事件收到 */
+/** 浏览器开发预览：新窗口启动时读取，已开着的窗口通过 storage 事件刷新 */
 function store(p: PreviewPayload) {
   try {
     localStorage.setItem(PAYLOAD_KEY, JSON.stringify(p));
   } catch {
-    // 存储不可用时只靠 Tauri 事件
+    // 浏览器禁用存储时，预览页会显示没有可预览的对话。
   }
 }
 
-async function openPreview(kind: PreviewKindId) {
+function openPreview(kind: PreviewKindId) {
   const payload = buildPayload(kind);
   if (!payload) return;
-  store(payload);
-  if (!isTauri) return openPopup();
-  try {
-    const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
-    const { emitTo } = await import("@tauri-apps/api/event");
-    const geometry = await geometryFor();
-    const key = JSON.stringify(geometry);
-    const existing = await WebviewWindow.getByLabel(PREVIEW_LABEL);
-    if (existing) {
-      await emitTo(PREVIEW_LABEL, PAYLOAD_EVENT, payload);
-      if (key !== lastGeometry) {
-        lastGeometry = key;
-        await applyGeometry(existing, geometry);
-      }
-      await existing.unminimize().catch(() => {});
-      await existing.setFocus().catch(() => {});
-      return;
-    }
-    lastGeometry = key;
-    const win = new WebviewWindow(PREVIEW_LABEL, {
-      url: "preview.html",
-      title: "对话预览",
-      decorations: false,
-      resizable: true,
-      center: true,
-      focus: true,
-      width: geometry.size?.w ?? 1280,
-      height: geometry.size?.h ?? 720,
-      minWidth: 160,
-      minHeight: 90,
-      fullscreen: geometry.size == null,
-    });
-    win.once("tauri://error", (e) => {
-      console.error(e);
-      toast("预览窗口打开失败", "error");
-    });
-  } catch (e) {
-    console.error(e);
-    toast("预览窗口打开失败", "error");
+  if (!isTauri) {
+    store(payload);
+    openPopup();
+    return;
   }
+  // 连续点击时等创建完成后再查找现有窗口。
+  desktopQueue = desktopQueue.then(() => openDesktopPreview(payload)).catch(reportPreviewError);
+}
+
+function reportPreviewError(error: unknown) {
+  console.error(error);
+  toast("预览窗口打开失败", "error");
+}
+
+async function openDesktopPreview(payload: PreviewPayload) {
+  const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+  const { emitTo, listen } = await import("@tauri-apps/api/event");
+  if (!listeningForPreview) {
+    await listen(PREVIEW_READY_EVENT, () => {
+      if (desktopPayload) void emitTo(PREVIEW_LABEL, PAYLOAD_EVENT, desktopPayload).catch(reportPreviewError);
+    });
+    listeningForPreview = true;
+  }
+  const geometry = await geometryFor();
+  const key = JSON.stringify(geometry);
+  const existing = await WebviewWindow.getByLabel(PREVIEW_LABEL);
+  if (existing) {
+    if (key !== lastGeometry) await applyGeometry(existing, geometry);
+    lastGeometry = key;
+    desktopPayload = payload;
+    await emitTo(PREVIEW_LABEL, PAYLOAD_EVENT, payload);
+    return;
+  }
+  desktopPayload = payload;
+  const win = new WebviewWindow(PREVIEW_LABEL, {
+    url: "preview.html",
+    title: "对话预览",
+    decorations: false,
+    resizable: true,
+    center: true,
+    visible: false,
+    focus: false,
+    backgroundColor: "#000000",
+    width: geometry.size?.w ?? 1280,
+    height: geometry.size?.h ?? 720,
+    minWidth: 160,
+    minHeight: 90,
+    fullscreen: geometry.size == null,
+  });
+  await new Promise<void>((resolve, reject) => {
+    void win.once("tauri://created", () => resolve()).catch(reject);
+    void win.once("tauri://error", (e) => reject(e.payload)).catch(reject);
+  });
+  lastGeometry = key;
 }
 
 interface Geometry {
