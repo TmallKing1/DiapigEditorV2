@@ -1,6 +1,6 @@
 <script lang="ts">
   // 设置页主容器：每个设置类别一张横向卡片。
-  // 「常规」：启动、编辑、预览、自动保存；「个性化」：主题色、字体设置、标题栏。
+  // 「对话」：新节点、显示与修正、预览；「个性化」：主题色、字体设置、标题栏。
   import { isTauri } from "../lib/files";
   import { pickStructIds } from "../lib/structIdImport";
   import type { DefaultIds } from "../model/defaultIds";
@@ -72,11 +72,11 @@
     }
   }
 
-  // —— 常规：编辑 ——
+  // —— 对话：新节点 ——
 
   const OP_OPTIONS: DropdownOption[] = OP_LABELS.map((label, i) => ({ value: String(i), label }));
 
-  // —— 常规：预览 ——
+  // —— 对话：预览 ——
 
   /** 四种设备都可预览（2026-11-17 解禁触屏与手柄） */
   const ENABLED_DEVICES: PreviewDevice[] = ["pc", "touch", "console", "mobilePad"];
@@ -260,19 +260,41 @@
     </section>
   {:else if tab === "dialog"}
     <section class="card setting enter">
-      <h2 class="card-title">编辑</h2>
+      <h2 class="card-title">新节点</h2>
       <div class="setting-body">
         <div class="row">
-          <label class="name" for="new-title">新节点默认标题</label>
-          <div class="control">
-            <input
-              id="new-title"
-              class="input"
-              maxlength="200"
-              placeholder="（无标题）"
-              value={settings.newNodeTitle}
-              oninput={(e) => setSetting("newNodeTitle", e.currentTarget.value)}
-            />
+          <label class="check">
+            <input type="checkbox" checked={settings.newNodeInheritTitle} onchange={(e) => setSetting("newNodeInheritTitle", e.currentTarget.checked)} />新节点继承标题
+          </label>
+        </div>
+        <div class="expand" class:open={!settings.newNodeInheritTitle} inert={settings.newNodeInheritTitle}>
+          <div class="clip title-rows">
+            <div class="row">
+              <label class="name" for="new-title">新节点默认标题</label>
+              <div class="control">
+                <input
+                  id="new-title"
+                  class="input"
+                  maxlength="200"
+                  placeholder="（无标题）"
+                  value={settings.newNodeTitle}
+                  oninput={(e) => setSetting("newNodeTitle", e.currentTarget.value)}
+                />
+              </div>
+            </div>
+            <div class="row">
+              <label class="name" for="new-subtitle">新节点默认副标题</label>
+              <div class="control">
+                <input
+                  id="new-subtitle"
+                  class="input"
+                  maxlength="200"
+                  placeholder="（无副标题）"
+                  value={settings.newNodeSubtitle}
+                  oninput={(e) => setSetting("newNodeSubtitle", e.currentTarget.value)}
+                />
+              </div>
+            </div>
           </div>
         </div>
         <div class="row">
@@ -294,6 +316,12 @@
             <Dropdown id="new-op" options={OP_OPTIONS} value={String(settings.newNodeOp)} onchange={(v) => setSetting("newNodeOp", Number(v))} />
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="card setting enter" style:--enter-delay="40ms">
+      <h2 class="card-title">显示与修正</h2>
+      <div class="setting-body">
         <div class="row">
           <label class="name" for="content-font">对话内容预览字体</label>
           <div class="control">
@@ -314,7 +342,7 @@
       </div>
     </section>
 
-    <section class="card setting enter" style:--enter-delay="40ms">
+    <section class="card setting enter" style:--enter-delay="80ms">
       <h2 class="card-title">预览</h2>
       <div class="setting-body">
         <div class="row">
@@ -718,6 +746,11 @@
     /* 给输入框的焦点描边留出位置 */
     margin: -4px;
     padding: 4px;
+  }
+  .title-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
   }
 
   /* —— 自定义字体列表：左大图标（两行字高）+ 名称 + 灰色路径；悬停时右侧出现移除按钮 —— */

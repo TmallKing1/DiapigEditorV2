@@ -33,12 +33,14 @@
     node,
     index,
     nodes,
+    isStart,
     onsave,
     oncancel,
   }: {
     node: DialogNode;
     index: number;
     nodes: DialogNode[];
+    isStart: boolean;
     onsave: (node: DialogNode) => void;
     oncancel: () => void;
   } = $props();
@@ -46,6 +48,7 @@
   // 编辑的是副本，保存时才写回
   const initial = untrack(() => node);
   let draft = $state<DialogNode>({ ...initial, branches: initial.branches.map((b) => ({ ...b })) });
+  const inheritTitle = $derived(!isStart && draft.inheritTitle);
   let hasSubtitle = $state(initial.subtitle !== "");
   let mode = $state<ContentMode>(readMode());
   /** 两种模式共用一份撤销记录，切换后仍可撤销 */
@@ -93,6 +96,7 @@
     const out = $state.snapshot(draft) as DialogNode;
     // 文本框里的真实换行统一存成字面量 \n
     out.content = out.content.replace(/\r?\n/g, "\\n");
+    out.inheritTitle = inheritTitle;
     if (!hasSubtitle) out.subtitle = "";
     out.duration = Math.min(Math.max(Number(out.duration) || 0, 0), 999);
     out.jump = clampIndex(out.jump);
@@ -126,16 +130,16 @@
     <div class="cards">
       <CollapsibleCard title="文本" open enter={false} unclip>
         <div class="grid">
-          <label class="check wide">
-            <input type="checkbox" bind:checked={draft.inheritTitle} />
+          <label class="check wide inherit-check" data-tip={isStart ? "开始节点没有标题可继承。" : undefined}>
+            <input type="checkbox" checked={inheritTitle} disabled={isStart} onchange={(e) => (draft.inheritTitle = e.currentTarget.checked)} />
             继承上一段对话的标题（不覆写标题）
           </label>
 
           <div class="field">
             <label class="label" for="ne-title">标题（说话人）</label>
             <div class="inline">
-              <input id="ne-title" class="input" data-autofocus bind:value={draft.title} disabled={draft.inheritTitle} />
-              <button class="btn" disabled={draft.inheritTitle} onclick={() => (draft.title = PLAYER_NAME)}>
+              <input id="ne-title" class="input" data-autofocus bind:value={draft.title} disabled={inheritTitle} />
+              <button class="btn" disabled={inheritTitle} onclick={() => (draft.title = PLAYER_NAME)}>
                 <Icon name="user" />使用玩家名
               </button>
             </div>
@@ -143,14 +147,14 @@
 
           <div class="field">
             <label class="check label-check">
-              <input type="checkbox" bind:checked={hasSubtitle} disabled={draft.inheritTitle} />
+              <input type="checkbox" bind:checked={hasSubtitle} disabled={inheritTitle} />
               副标题（身份）
             </label>
             <input
               class="input"
               aria-label="副标题"
               bind:value={draft.subtitle}
-              disabled={draft.inheritTitle || !hasSubtitle}
+              disabled={inheritTitle || !hasSubtitle}
             />
           </div>
 
@@ -300,6 +304,9 @@
 </div>
 
 <style>
+  .inherit-check > input:disabled {
+    pointer-events: none;
+  }
   /* 代替 Modal 内容区的纵向排列；上方 6px 给卡片阴影（向上约 4px 外扩加 1px 描边）留位置 */
   .cards {
     display: flex;

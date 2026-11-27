@@ -88,6 +88,7 @@
         node={doc.nodes[dlg.editingIndex]}
         index={dlg.editingIndex}
         nodes={doc.nodes}
+        isStart={doc.startNode === dlg.editingIndex}
         onsave={saveNode}
         oncancel={() => (dlg.editingIndex = -1)}
       />

@@ -59,7 +59,7 @@ class DialogSession extends FileSession<DialogDoc, EditState> {
       focusId: "id-dialog",
       parse(text) {
         const result = parseDialog(text);
-        if (result.doc.nodes.length === 0) result.doc.nodes.push(makeNode());
+        if (result.doc.nodes.length === 0) result.doc.nodes.push(makeNode(true));
         parsedFromV1 = result.convertedFromV1;
         // 游戏内导入只接受新版完整结构：旧结构的文件一律补上起止设置，按新结构编辑和保存
         parsedOldShape = result.doc.beginEnd === undefined;
@@ -104,9 +104,21 @@ class DialogSession extends FileSession<DialogDoc, EditState> {
 export const dlg = new DialogSession();
 registerSession(dlg);
 
-/** 按设置里的默认标题、内容和操作类型新建节点 */
-export function makeNode(): DialogNode {
-  return { ...newNode(), title: settings.newNodeTitle, content: settings.newNodeContent, op: settings.newNodeOp };
+/** 新对话的开始节点没有上一段标题可继承 */
+function makeNode(isStart = false): DialogNode {
+  const node = newNode();
+  const inheritTitle = !isStart && settings.newNodeInheritTitle;
+  const defaultTitle = isStart && settings.newNodeInheritTitle
+    ? settings.newNodeTitle || node.title
+    : settings.newNodeTitle;
+  return {
+    ...node,
+    inheritTitle,
+    title: inheritTitle ? "" : defaultTitle,
+    subtitle: inheritTitle ? "" : settings.newNodeSubtitle,
+    content: settings.newNodeContent,
+    op: settings.newNodeOp,
+  };
 }
 
 /** 导出、预览用的对话：按设置处理末尾的「跳转下个节点」 */
@@ -127,7 +139,7 @@ export function createNew(historyTab: string) {
   // 设置里填了默认结构体 ID 的项用设置的值；没填的沿用当前对话，省得重填。总是新结构（带起止设置）
   const cur = dlg.doc;
   const { ids } = newDialogIds(defaultIds(), cur ? { ids: cur.ids, withBeginEnd: true } : undefined);
-  dlg.load({ doc: { ...newDoc(ids, true), nodes: [makeNode()] }, clipboard: null }, "", "", historyTab);
+  dlg.load({ doc: { ...newDoc(ids, true), nodes: [makeNode(true)] }, clipboard: null }, "", "", historyTab);
 }
 
 /** 导入文件：弹出系统的打开对话框；选中的是任务链时打开到任务页签 */

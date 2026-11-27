@@ -51,17 +51,21 @@ export interface Settings {
   /** 启动时自动打开上次关闭时的对话 */
   reopenLast: boolean;
 
-  // —— 常规：编辑 ——
+  // —— 对话：新节点 ——
+  newNodeInheritTitle: boolean;
   newNodeTitle: string;
+  newNodeSubtitle: string;
   newNodeContent: string;
   /** 新节点默认操作类型（OP_*） */
   newNodeOp: number;
+
+  // —— 对话：显示与修正 ——
   /** 对话内容预览字体；空串 = 跟随界面字体 */
   contentFont: string;
   /** 末尾节点为「跳转下个节点」时按「结束对话」显示和导出 */
   autoEnd: boolean;
 
-  // —— 常规：预览 ——
+  // —— 对话：预览 ——
   previewDevice: PreviewDevice;
   previewKeyHint: PreviewKeyHint;
   previewCanvas: PreviewCanvas;
@@ -122,7 +126,9 @@ export const DEFAULTS: Settings = {
   themeColor: "classic",
   customFonts: [],
   reopenLast: false,
+  newNodeInheritTitle: false,
   newNodeTitle: "标题",
+  newNodeSubtitle: "",
   newNodeContent: "内容",
   newNodeOp: 1,
   contentFont: "",
@@ -155,7 +161,9 @@ export const DEFAULTS: Settings = {
 export const SETTING_GROUPS: Record<string, (keyof Settings)[]> = {
   general: ["reopenLast", ...DEFAULT_ID_KEYS, "saveOnClose", "autoSave", "autoSaveWhen", "autoSaveInterval"],
   dialog: [
+    "newNodeInheritTitle",
     "newNodeTitle",
+    "newNodeSubtitle",
     "newNodeContent",
     "newNodeOp",
     "contentFont",
