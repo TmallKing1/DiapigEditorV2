@@ -21,6 +21,7 @@
     { id: "dialog", label: "对话", icon: "chat" },
     { id: "personal", label: "个性化", icon: "shirt" },
     { id: "advanced", label: "更多", icon: "grid" },
+    { id: "about", label: "关于", icon: "info", resettable: false },
   ];
 </script>
 

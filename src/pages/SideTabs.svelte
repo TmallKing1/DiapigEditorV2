@@ -5,6 +5,8 @@
     icon: string;
     /** 未实现的页签：点击只报 TODO，不切换 */
     ready?: boolean;
+    /** 是否显示右侧悬停重置按钮（默认 true） */
+    resettable?: boolean;
   }
 </script>
 
@@ -79,7 +81,7 @@
     >
       <Icon name={t.icon} size={18} /><span class="text">{t.label}</span>
     </button>
-    {#if onreset && t.ready !== false}
+    {#if onreset && t.ready !== false && t.resettable !== false}
       <button class="icon-btn reset" data-tip="重置「{t.label}」页面" aria-label="重置「{t.label}」页面" onclick={() => onreset(t)}>
         <Icon name="reset" />
       </button>

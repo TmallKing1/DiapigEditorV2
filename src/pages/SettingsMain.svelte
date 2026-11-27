@@ -2,6 +2,11 @@
   // 设置页主容器：每个设置类别一张横向卡片。
   // 「对话」：新节点、显示与修正、预览；「个性化」：主题色、字体设置、标题栏。
   import { isTauri } from "../lib/files";
+  import { aboutState, checkForUpdates, openExternalUrl } from "../lib/about.svelte";
+  import { APP_VERSION, AUTHOR_URL, GUIDE_URL } from "../model/about";
+  import avatarImg from "../assets/avatar.png";
+  import appIconImg from "../assets/app-icon.png";
+  import wonderlandImg from "../assets/wonderland.ico";
   import { pickStructIds } from "../lib/structIdImport";
   import type { DefaultIds } from "../model/defaultIds";
   import {
@@ -466,6 +471,48 @@
         </div>
       </div>
     </section>
+  {:else if tab === "about"}
+    <section class="card setting enter">
+      <h2 class="card-title">关于</h2>
+      <div class="setting-body">
+        <div class="about-list">
+          <div class="about-row">
+            <img class="about-img round" src={avatarImg} alt="小猪之最Thepig 头像" />
+            <div class="about-text">
+              <span class="about-title">小猪之最Thepig</span>
+              <span class="about-desc">Diapig 及 Diapig Editor 的开发者</span>
+            </div>
+            <div class="about-action">
+              <button class="btn accent" onclick={() => void openExternalUrl(AUTHOR_URL)}>打开 B 站主页</button>
+            </div>
+          </div>
+
+          <div class="about-row">
+            <img class="about-img" src={appIconImg} alt="Diapig Editor 图标" />
+            <div class="about-text">
+              <span class="about-title">Diapig Editor</span>
+              <span class="about-desc">当前版本：{APP_VERSION}</span>
+            </div>
+            <div class="about-action">
+              <button class="btn" disabled={aboutState.checking} onclick={() => void checkForUpdates()}>
+                {aboutState.checking ? "检查中…" : "检查更新"}
+              </button>
+            </div>
+          </div>
+
+          <div class="about-row">
+            <img class="about-img" src={wonderlandImg} alt="千星奇域枢景球图标" />
+            <div class="about-text">
+              <span class="about-title">Diapig 对话模板指南</span>
+              <span class="about-desc">浏览模板和编辑器用法、下载资产文件</span>
+            </div>
+            <div class="about-action">
+              <button class="btn" onclick={() => void openExternalUrl(GUIDE_URL)}>点击前往</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   {:else}
     <section class="card setting enter">
       <h2 class="card-title">主题色</h2>
@@ -825,6 +872,51 @@
   .font:focus-within .remove {
     opacity: 1;
     transition-duration: var(--t-hover-in);
+  }
+
+  /* —— 关于：左侧图片 + 黑标题/灰副标题 + 右侧通用操作按钮 —— */
+  .about-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+  }
+  .about-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+    min-width: 0;
+    padding: var(--s1) 0;
+  }
+  .about-img {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--r-panel);
+    object-fit: contain;
+  }
+  .about-img.round {
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .about-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .about-title {
+    color: var(--text);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .about-desc {
+    color: var(--text-2);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .about-action {
+    flex: none;
   }
 
   @media (prefers-reduced-motion: reduce) {

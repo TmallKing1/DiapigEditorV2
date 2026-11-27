@@ -1,6 +1,7 @@
 // 发布版不弹出控制台窗口
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod about;
 mod comment;
 mod files;
 mod fit;
@@ -80,6 +81,8 @@ fn main() {
         .manage(Arc::new(pixel_art::PixelArtState::default()))
         .manage(joypad::JoypadState(std::sync::Mutex::new(())))
         .invoke_handler(tauri::generate_handler![
+            about::open_external_url,
+            about::github_latest_release,
             list_fonts,
             comment::comment_fetch,
             joypad::joypad_inspect,
