@@ -109,7 +109,7 @@ export function taskRowAction(index: number, action: RowAction) {
     }
     case "copy":
       tsk.edit = { ...state, clipboard: cloneTask(task) };
-      toast(`已复制任务 ${task.id}`, "info");
+      toast(`已复制任务 ${index}`, "info");
       break;
     case "paste":
       tsk.commit(pasteTaskOver(state, index));

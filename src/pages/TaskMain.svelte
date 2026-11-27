@@ -4,7 +4,6 @@
   import { tick } from "svelte";
   import { requestNew } from "../lib/home.svelte";
   import { importTaskFile, moveTaskTo, saveTask, setChainName, taskRowAction, tsk } from "../lib/task.svelte";
-  import { duplicateIds } from "../model/task";
   import DropLine from "../ui/DropLine.svelte";
   import Icon from "../ui/Icon.svelte";
   import TaskEditor from "../ui/TaskEditor.svelte";
@@ -20,7 +19,6 @@
   } = $props();
 
   let doc = $derived(tsk.doc);
-  let dups = $derived(doc ? duplicateIds(doc.tasks) : new Set<number>());
 
   let listEl = $state<HTMLUListElement>();
   const rowDrag = new RowDrag({
@@ -85,7 +83,6 @@
       </button>
     {/if}
     <span class="hint">共 {doc.tasks.length} 个任务</span>
-    {#if dups.size}<span class="warn"><Icon name="warn" size={12} />有重复的编号</span>{/if}
     <span class="grow"></span>
     <button class="icon-btn" data-tip="撤销（Ctrl + Z）" aria-label="撤销" onclick={() => tsk.undo()} disabled={!tsk.canUndo}>
       <Icon name="undo" />
@@ -103,7 +100,6 @@
         {task}
         index={i}
         count={doc.tasks.length}
-        duplicate={dups.has(task.id)}
         selected={tsk.selectedUid === task.uid}
         canPaste={tsk.edit?.clipboard != null}
         enterDelay={tsk.stagger ? Math.min(i, 6) * 25 : 0}
@@ -124,7 +120,7 @@
   {#key editing.uid}
     <TaskEditor
       task={editing}
-      duplicateOf={(id) => doc.tasks.some((t) => t.uid !== editing.uid && t.id === id)}
+      index={tsk.editingIndex}
       onsave={saveTask}
       oncancel={() => (tsk.editingIndex = -1)}
     />
@@ -206,13 +202,6 @@
     margin-right: var(--s1);
     font-size: 16px;
     font-weight: 700;
-  }
-  .warn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--danger);
-    font-size: 12.5px;
   }
   .list {
     position: relative;

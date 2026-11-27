@@ -12,8 +12,6 @@ export const MARKER_RANGES = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20] as const;
 export interface TaskItem {
   /** 仅用于界面列表的稳定标识，不写入文件 */
   uid: number;
-  /** 任务编号：玩法调用「推进任务」时用来匹配 */
-  id: number;
   name: string;
   /** 无标点或尚无距离时显示 */
   hint: string;
@@ -52,10 +50,9 @@ export interface TaskEditState {
   clipboard: TaskItem | null;
 }
 
-export function newTask(id = 0): TaskItem {
+export function newTask(): TaskItem {
   return {
     uid: newUid(),
-    id,
     name: "新任务",
     hint: "",
     point: 0,
@@ -72,26 +69,13 @@ export function cloneTask(t: TaskItem): TaskItem {
   return { ...t, uid: newUid() };
 }
 
-/** 新任务的默认编号：当前最大编号 + 1；没有任务时为 0 */
-export function nextTaskId(tasks: TaskItem[]): number {
-  return tasks.length ? Math.max(...tasks.map((t) => t.id)) + 1 : 0;
-}
-
-/** 出现不止一次的编号 */
-export function duplicateIds(tasks: TaskItem[]): Set<number> {
-  const seen = new Set<number>();
-  const dup = new Set<number>();
-  for (const t of tasks) (seen.has(t.id) ? dup : seen).add(t.id);
-  return dup;
-}
-
 export const DEFAULT_TASK_NAME = "新任务链";
 
 export function newTaskDoc(ids?: TaskIds, name = DEFAULT_TASK_NAME): TaskDoc {
   return {
     ids: ids ? { ...ids } : { chain: "0", task: "0" },
     name: name.trim() || DEFAULT_TASK_NAME,
-    tasks: [newTask(0)],
+    tasks: [newTask()],
     completeEvent: "",
   };
 }
@@ -112,15 +96,14 @@ export function insertTask(state: TaskEditState, index: number, task: TaskItem):
   return withTasks(state, tasks);
 }
 
-/** 在 index 之后添加一个新任务，编号取最大编号 + 1 */
+/** 在 index 之后添加一个新任务 */
 export function addTaskAfter(state: TaskEditState, index: number, task?: TaskItem): TaskEditState {
-  return insertTask(state, index + 1, task ?? newTask(nextTaskId(state.doc.tasks)));
+  return insertTask(state, index + 1, task ?? newTask());
 }
 
-/** 复制一份放在后面；副本的编号取最大编号 + 1，避免重复 */
+/** 复制一份放在后面 */
 export function duplicateTask(state: TaskEditState, index: number): TaskEditState {
-  const copy = { ...cloneTask(state.doc.tasks[index]), id: nextTaskId(state.doc.tasks) };
-  return insertTask(state, index + 1, copy);
+  return insertTask(state, index + 1, cloneTask(state.doc.tasks[index]));
 }
 
 export function removeTask(state: TaskEditState, index: number): TaskEditState {

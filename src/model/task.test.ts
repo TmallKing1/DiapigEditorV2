@@ -6,12 +6,10 @@ import {
   type TaskEditState,
   type TaskItem,
   addTaskAfter,
-  duplicateIds,
   duplicateTask,
   moveTask,
   newTask,
   newTaskDoc,
-  nextTaskId,
   pasteTaskOver,
   removeTask,
   taskIdsReady,
@@ -23,13 +21,12 @@ import { newDoc } from "./types";
 const strip = (tasks: TaskItem[]) => tasks.map(({ uid: _uid, ...rest }) => rest);
 
 describe("任务链读写", () => {
-  it("读出游戏导出的示例", () => {
+  it("兼容读出旧版游戏导出（自动剥离旧任务编号与缺失事件字段）", () => {
     const doc = parseTaskChain(example);
     expect(doc.ids).toEqual({ chain: "1077936137", task: "1077936136" });
     expect(doc.name).toBe("抓老鼠");
     expect(strip(doc.tasks)).toEqual([
       {
-        id: 0,
         name: "抓住出生点的老鼠",
         hint: "移动到出生点，即可抓老鼠",
         point: 1073741825,
@@ -45,28 +42,29 @@ describe("任务链读写", () => {
     expect(doc.completeEvent).toBe("");
   });
 
-  it("事件字段写出再读回，位置在结构体末尾", () => {
+  it("事件字段写出再读回，位置在结构体末尾（新版 9 字段）", () => {
     const doc = parseTaskChain(example);
     doc.completeEvent = "链完成:抓老鼠";
     doc.tasks[0].enterEvent = "进入:抓老鼠";
     const json = writeTaskChain(doc) as any;
     expect(json.value.map((f: any) => f.param_type)).toEqual(["String", "StructList", "String"]);
     expect(json.value[2].value).toBe("链完成:抓老鼠");
-    expect(json.value[1].value.value[0].value.value[9]).toEqual({ param_type: "String", value: "进入:抓老鼠" });
+    expect(json.value[1].value.value[0].value.value[8]).toEqual({ param_type: "String", value: "进入:抓老鼠" });
     const again = parseTaskChain(JSON.stringify(json));
     expect(again.completeEvent).toBe("链完成:抓老鼠");
     expect(again.tasks[0].enterEvent).toBe("进入:抓老鼠");
   });
 
-  it("写出再读回不变，字段类型与示例一致", () => {
+  it("写出再读回不变，字段类型为新版 9 字段", () => {
     const doc = parseTaskChain(example);
-    const again = parseTaskChain(stringifyTaskChain(doc));
+    const json = writeTaskChain(doc) as any;
+    const again = parseTaskChain(JSON.stringify(json));
     expect(again.ids).toEqual(doc.ids);
     expect(again.name).toBe(doc.name);
     expect(strip(again.tasks)).toEqual(strip(doc.tasks));
     const types = (j: any) => j.value[1].value.value[0].value.value.map((f: any) => f.param_type);
-    expect(types(writeTaskChain(doc))).toEqual([...types(JSON.parse(example)), "String"]);
-    expect(writeTaskChain(doc).value[1].value.value[0].value.structId).toBe("1077936136");
+    expect(types(json)).toEqual(["String", "String", "Int32", "Int32", "Int32", "Float", "Float", "String", "String"]);
+    expect(json.value[1].value.value[0].value.structId).toBe("1077936136");
   });
 
   it("不是任务链时报错", () => {
@@ -87,27 +85,22 @@ describe("文件种类识别", () => {
 });
 
 describe("任务列表", () => {
-  const state = (ids: number[]): TaskEditState => ({
-    doc: { ...newTaskDoc(), tasks: ids.map((id) => newTask(id)) },
+  const state = (names: string[]): TaskEditState => ({
+    doc: { ...newTaskDoc(), tasks: names.map((name) => ({ ...newTask(), name })) },
     clipboard: null,
   });
 
-  it("编号：最大 + 1，空列表为 0；重复编号", () => {
-    expect(nextTaskId([])).toBe(0);
-    expect(nextTaskId(state([3, 1, 7]).doc.tasks)).toBe(8);
-    expect([...duplicateIds(state([1, 2, 1, 3, 3]).doc.tasks)].sort()).toEqual([1, 3]);
-  });
-
-  it("添加、复制取新编号；删除保留最后一个；移动；粘贴保留 uid", () => {
-    let s = addTaskAfter(state([0, 5]), 0);
-    expect(s.doc.tasks.map((t) => t.id)).toEqual([0, 6, 5]);
+  it("添加、复制；删除保留最后一个；移动；粘贴保留 uid", () => {
+    let s = addTaskAfter(state(["A", "B"]), 0);
+    expect(s.doc.tasks.map((t) => t.name)).toEqual(["A", "新任务", "B"]);
     s = duplicateTask(s, 2);
-    expect(s.doc.tasks.map((t) => t.id)).toEqual([0, 6, 5, 7]);
-    expect(moveTask(s, 3, 0).doc.tasks.map((t) => t.id)).toEqual([7, 0, 6, 5]);
+    expect(s.doc.tasks.map((t) => t.name)).toEqual(["A", "新任务", "B", "B"]);
+    expect(s.doc.tasks[3].uid).not.toBe(s.doc.tasks[2].uid);
+    expect(moveTask(s, 3, 0).doc.tasks.map((t) => t.name)).toEqual(["B", "A", "新任务", "B"]);
     expect(moveTask(s, 0, 9)).toBe(s);
-    const one = state([4]);
+    const one = state(["唯一"]);
     expect(removeTask(one, 0)).toBe(one);
-    expect(removeTask(s, 1).doc.tasks.map((t) => t.id)).toEqual([0, 5, 7]);
+    expect(removeTask(s, 1).doc.tasks.map((t) => t.name)).toEqual(["A", "B", "B"]);
     const clip = { ...s, clipboard: { ...s.doc.tasks[0], name: "复制的" } };
     const pasted = pasteTaskOver(clip, 2);
     expect(pasted.doc.tasks[2].name).toBe("复制的");

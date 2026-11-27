@@ -10,13 +10,12 @@
 
   let {
     task,
-    duplicateOf,
+    index,
     onsave,
     oncancel,
   }: {
     task: TaskItem;
-    /** 判断编号是否与别的任务重复 */
-    duplicateOf: (id: number) => boolean;
+    index: number;
     onsave: (task: TaskItem) => void;
     oncancel: () => void;
   } = $props();
@@ -28,7 +27,6 @@
   const toInt = (v: unknown, min: number, max: number) => Math.min(Math.max(Math.trunc(Number(v) || 0), min), max);
   const toFloat = (v: unknown) => Math.max(Math.round((Number(v) || 0) * 100) / 100, 0);
 
-  let idDup = $derived(duplicateOf(toInt(draft.id, -INT32_MAX, INT32_MAX)));
   let rangeOptions = MARKER_RANGES.map((r) => ({ value: String(r), label: `${r} m` }));
   // 读到的范围不在可选列表里时（如示例里的 0）也能显示
   let rangeValue = $derived(String(draft.markerRange));
@@ -40,7 +38,6 @@
 
   function save() {
     const out = $state.snapshot(draft) as TaskItem;
-    out.id = toInt(out.id, -INT32_MAX, INT32_MAX);
     out.point = toInt(out.point, -INT32_MAX - 1, INT32_MAX);
     out.detect = toFloat(out.detect);
     out.auto = Math.round((Number(out.auto) || 0) * 100) / 100;
@@ -57,16 +54,11 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div {onkeydown}>
-  <Modal title="编辑任务 {initial.id}" width={640} onclose={oncancel}>
+  <Modal title="编辑任务 {index}" width={640} onclose={oncancel}>
     <div class="cards">
       <CollapsibleCard title="文本" open enter={false} unclip>
         <div class="grid">
-          <div class="field">
-            <label class="label" for="te-id">任务编号</label>
-            <input id="te-id" class="input" class:invalid={idDup} type="number" step="1" bind:value={draft.id} />
-            {#if idDup}<span class="hint warn"><Icon name="warn" size={12} /> 与其他任务的编号重复</span>{/if}
-          </div>
-          <div class="field">
+          <div class="field wide">
             <label class="label" for="te-name">名称</label>
             <input id="te-name" class="input" data-autofocus bind:value={draft.name} />
           </div>
@@ -153,12 +145,6 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-  }
-  .warn {
-    color: var(--danger);
-  }
-  .invalid {
-    border-color: var(--danger);
   }
   .grow {
     flex: 1;

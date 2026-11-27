@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 任务列表的一行：编号、名称、提示与标点 / 范围徽标；操作按钮同对话节点行
+  // 任务列表的一行：列表序号（0 起）、名称、提示与标点 / 范围徽标；操作按钮同对话节点行
   import type { RowAction } from "../lib/dialog.svelte";
   import { MARKER_NONE, type TaskItem, markerText } from "../model/task";
   import Icon from "./Icon.svelte";
@@ -8,7 +8,6 @@
     task,
     index,
     count,
-    duplicate,
     selected,
     canPaste,
     enterDelay,
@@ -20,8 +19,6 @@
     task: TaskItem;
     index: number;
     count: number;
-    /** 编号与别的任务重复 */
-    duplicate: boolean;
     selected: boolean;
     canPaste: boolean;
     enterDelay: number;
@@ -37,12 +34,11 @@
     <Icon name="grip" />
   </span>
 
-  <button class="main" onclick={onedit} aria-label="编辑任务 {task.id}" data-tip="点击编辑任务。任务按列表顺序推进。">
-    <span class="index" class:dup={duplicate} data-tip="任务编号">{task.id}</span>
+  <button class="main" onclick={onedit} aria-label="编辑任务 {index}" data-tip="点击编辑任务。任务按列表顺序（0 起）推进。">
+    <span class="index" data-tip="任务序号（0 起）">{index}</span>
     <span class="text">
       <span class="head">
         <span class="title">{task.name || "（未命名任务）"}</span>
-        {#if duplicate}<span class="warn"><Icon name="warn" size={12} />编号重复</span>{/if}
       </span>
       <span class="content">{#if task.hint}{task.hint}{:else}<span class="muted">（无提示）</span>{/if}</span>
       <span class="meta">
@@ -144,10 +140,6 @@
     line-height: 20px;
     text-align: center;
   }
-  .index.dup {
-    border-color: var(--danger);
-    color: var(--danger);
-  }
   .text {
     flex: 1;
     min-width: 0;
@@ -191,13 +183,6 @@
   .optional,
   .event {
     color: var(--text-3);
-  }
-  .warn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--danger);
-    font-size: 12.5px;
   }
   .actions {
     flex: none;

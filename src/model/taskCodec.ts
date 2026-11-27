@@ -1,7 +1,8 @@
 // 任务链结构体 JSON 的读写，外层包装与对话相同（见 codec.ts）。
 //   任务链 {structId, type:"Struct", value:[String 名称, StructList 任务列表, String 任务完成事件]}
-//   任务   [Int32 任务编号, String 名称, String 提示, Int32 任务点位, Int32 标点类型, Int32 标点范围m,
+//   任务   [String 名称, String 提示, Int32 任务点位, Int32 标点类型, Int32 标点范围m,
 //           Float 检测范围m, Float 自动推进范围m, String 可选任务, String 进入任务事件]
+// 2026-11-28 移除原 0 号字段 Int32「任务编号」：兼容读取旧版（0 号字段为 Int32 时右移 1 位丢弃），写出总是新版 9 字段。
 // 两个事件字段是 2026-11-19 新增的：旧文件没有它们时读成空串，写出时总是带上。
 import {
   type Json,
@@ -27,20 +28,21 @@ function rStringOpt(arr: unknown[], i: number): string {
 }
 
 function readTask(arr: unknown[]): TaskItem {
-  let marker = rInt(arr, 4);
+  // 兼容旧版导出：0 号字段为 Int32（旧「任务编号」）时整体右移 1 位并丢弃
+  const off = field(arr, 0).param_type === "Int32" ? 1 : 0;
+  let marker = rInt(arr, 3 + off);
   if (marker < MARKER_NONE || marker > MARKER_RANGE) marker = MARKER_NONE;
   return {
     uid: newUid(),
-    id: rInt(arr, 0),
-    name: rString(arr, 1),
-    hint: rString(arr, 2),
-    point: rInt(arr, 3),
+    name: rString(arr, 0 + off),
+    hint: rString(arr, 1 + off),
+    point: rInt(arr, 2 + off),
     marker,
-    markerRange: rInt(arr, 5),
-    detect: rFloat(arr, 6),
-    auto: rFloat(arr, 7),
-    optional: rString(arr, 8),
-    enterEvent: rStringOpt(arr, 9),
+    markerRange: rInt(arr, 4 + off),
+    detect: rFloat(arr, 5 + off),
+    auto: rFloat(arr, 6 + off),
+    optional: rString(arr, 7 + off),
+    enterEvent: rStringOpt(arr, 8 + off),
   };
 }
 
@@ -73,7 +75,6 @@ export function parseTaskChain(text: string): TaskDoc {
 
 function writeTask(t: TaskItem): unknown[] {
   return [
-    wInt(t.id),
     wString(t.name),
     wString(t.hint),
     wInt(t.point),
