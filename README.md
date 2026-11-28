@@ -8,8 +8,8 @@ Diapig Editor 是面向原神千星奇域创作者的 Windows 桌面工具。你
 
 在发布页的「Assets」里选一个文件下载。
 
-- `DiapigEditor-2.0.0-windows-x64-setup.exe`：安装版，下载后按向导完成安装即可使用。
-- `DiapigEditor-2.0.0-windows-x64-portable.exe`：免安装版，下载后直接打开就能运行。
+- `DiapigEditor-2.0.1-windows-x64-setup.exe`：安装版，下载后按向导完成安装即可使用。
+- `DiapigEditor-2.0.1-windows-x64-portable.exe`：免安装版，下载后直接打开就能运行。
 
 ## 使用文档
 
